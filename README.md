@@ -19,7 +19,7 @@ SubtitleAdjuster는 smi 및 srt 자막 파일의 인코딩을 변환하고 싱�
 
 1. 이 레포지토리를 클론합니다:
     ```sh
-    git clone https://github.com/yourusername/SubtitleAdjuster.git
+    git clone https://github.com/micronzone/SubtitleAdjuster.git
     cd SubtitleAdjuster
     ```
 
