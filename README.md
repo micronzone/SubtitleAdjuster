@@ -25,9 +25,9 @@ SubtitleAdjuster는 smi 및 srt 자막 파일의 인코딩을 변환하고 싱�
 
 2. (선택 사항) 가상 환경을 생성하고 활성화합니다:
     ```sh
-    python3 -m venv venv
-    source venv/bin/activate  # Linux 또는 macOS
-    .\venv\Scripts\activate   # Windows
+    python3 -m venv myenv
+    source myenv/bin/activate  # Linux 또는 macOS
+    .\myenv\Scripts\activate   # Windows
     ```
 
 3. **chardet** 모듈을 설치합니다.
