@@ -17,7 +17,7 @@ SubtitleAdjuster는 smi 및 srt 자막 파일의 인코딩을 변환하고 싱�
 
 ## 설치 방법
 
-1. 이 레포지토리를 클론합니다:
+1. 이 리포지토리를 클론합니다:
     ```sh
     git clone https://github.com/micronzone/SubtitleAdjuster.git
     cd SubtitleAdjuster
@@ -95,11 +95,26 @@ python3 subtitle_adjuster.py -d 1000 /path/to/dir/ or /path/to/file
 python3 subtitle_adjuster.py -a --debug /path/to/dir/ or /path/to/file
 ```
 
+## 업데이트
+
+SubtitleAdjuster 리포지토리 업데이트를 확인하는 것이 좋습니다!
+
+```sh
+cd SubtitleAdjuster
+git status
+```
+
+변경 사항 가져오기:
+
+```sh
+git pull origin main
+```
+
 ## 기여 방법
 
 기여해주셔서 감사합니다! 이 프로젝트에 기여하시려면 아래 단계를 따라 주세요:
 
-1. 이 레포지토리를 포크하세요
+1. 이 리포지토리를 포크하세요
 2. 기능 브랜치(micronzone 브랜치)를 생성하세요 (`git checkout -b micronzone/SubtitleAdjuster`)
 3. 변경 사항을 커밋하세요 (`git commit -m 'Add some SubtitleAdjuster'`)
 4. 브랜치에 푸시하세요 (`git push origin micronzone/SubtitleAdjuster`)
