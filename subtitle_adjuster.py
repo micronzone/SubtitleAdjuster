@@ -4,6 +4,12 @@ import sys
 import chardet
 import codecs
 import argparse
+from tqdm import tqdm
+
+# Micronzone's SubtitleAdjuster
+# https://github.com/micronzone/SubtitleAdjuster
+def print_signature():
+    print("### SubtitleAdjuster v1.0.0 - https://github.com/micronzone/SubtitleAdjuster ###")
 
 def detect_encoding(file_path):
     with open(file_path, 'rb') as f:
@@ -116,8 +122,94 @@ def adjust_line_sync_smi(line, offset, debug=False):
             line = line.replace(f"{match[0]}{match[1]}{match[2]}", f"{match[0]}{new_tc}{match[2]}")
     return line
 
-def process_files(files, encoding=None, sync_offset=None, debug=False):
-    for file_path in files:
+def convert_format(file_path, target_format, encoding, cc_class='KRCC', debug=False):
+    if debug:
+        print(f"[DEBUG] Converting {file_path} to {target_format} format")
+
+    new_file_path = os.path.splitext(file_path)[0] + f'.{target_format}'
+    try:
+        with codecs.open(file_path, 'r', encoding) as f:
+            content = f.read()
+
+        if target_format == 'srt':
+            content = smi_to_srt(content, debug)
+        elif target_format == 'smi':
+            content = srt_to_smi(content, cc_class, debug)
+
+        if not content.strip():  # Check for empty content
+            print(f"[ERROR] Conversion resulted in empty content for {file_path}")
+            return None
+
+        with codecs.open(new_file_path, 'w', encoding) as f:
+            f.write(content)
+        if debug:
+            print(f"[DEBUG] Format conversion successful for {file_path}")
+        return new_file_path
+    except Exception as e:
+        print(f"[ERROR] Failed to convert format for {file_path}: {e}")
+        return None
+
+def smi_to_srt(content, debug=False):
+    def ms_to_srt_time(ms):
+        ms = int(ms)
+        hours = ms // 3600000
+        ms %= 3600000
+        minutes = ms // 60000
+        ms %= 60000
+        seconds = ms // 1000
+        ms %= 1000
+        return f"{hours:02}:{minutes:02}:{seconds:02},{ms:03}"
+
+    def clean_html_tags(text):
+        clean_text = re.sub(r'<[^>]+>', '', text)
+        return clean_text.strip()
+
+    sync_pattern = re.compile(r'<SYNC Start=(\d+)>((?:.|\n)*?)(?=<SYNC Start=\d+|$)', re.IGNORECASE)
+    matches = sync_pattern.findall(content)
+
+    srt_content = []
+    index = 1
+
+    for i in range(len(matches) - 1):
+        start_time = ms_to_srt_time(matches[i][0])
+        end_time = ms_to_srt_time(matches[i + 1][0])
+        block = clean_html_tags(matches[i][1])
+        if block:
+            srt_content.append(f"{index}\n{start_time} --> {end_time}\n{block}\n")
+            index += 1
+
+    return '\n'.join(srt_content)
+
+def srt_to_smi(content, cc_class='KRCC', debug=False):
+    def srt_time_to_ms(srt_time):
+        hours, minutes, seconds, ms = map(int, re.split('[:,]', srt_time))
+        return str((hours * 3600 + minutes * 60 + seconds) * 1000 + ms)
+
+    style_tag = f'.{cc_class} {{ Name:{ "Korean" if cc_class == "KRCC" else "English" }; lang:{"ko-KR" if cc_class == "KRCC" else "en-US"}; SAMIType:CC; }}'
+
+    smi_content = ['<SAMI>', '<HEAD>', '<STYLE TYPE="text/css">', '<!--', style_tag, '-->', '</STYLE>', '</HEAD>', '<BODY>']
+
+    blocks = content.strip().split('\n\n')
+    previous_end_time = None
+
+    for block in blocks:
+        lines = block.split('\n')
+        if len(lines) >= 3:
+            start_time = srt_time_to_ms(lines[1].split()[0])
+            end_time = srt_time_to_ms(lines[1].split()[2])
+            text = ' '.join(lines[2:])
+
+            if previous_end_time and int(start_time) > int(previous_end_time):
+                smi_content.append(f"<SYNC Start={previous_end_time}><P Class={cc_class}>&nbsp;")
+
+            smi_content.append(f"<SYNC Start={start_time}><P Class={cc_class}>{text}")
+            previous_end_time = end_time
+
+    smi_content.append('</BODY></SAMI>')
+    return '\n'.join(smi_content)
+
+def process_files(files, encoding=None, sync_offset=None, target_format=None, cc_class='KRCC', debug=False):
+    for file_path in tqdm(files, desc="Processing files", unit="file"):
         if not file_path.lower().endswith(('.srt', '.smi')):
             print(f"[ERROR] Unsupported file format: {file_path}")
             continue
@@ -131,6 +223,11 @@ def process_files(files, encoding=None, sync_offset=None, debug=False):
 
         if sync_offset is not None:
             adjust_sync(file_path, sync_offset, source_encoding, debug)
+
+        if target_format:
+            new_file_path = convert_format(file_path, target_format, source_encoding, cc_class, debug)
+            if new_file_path:
+                print(f"[INFO] Converted {file_path} to {new_file_path}")
 
 def get_files_from_path(path):
     if os.path.isfile(path):
@@ -150,24 +247,43 @@ def interactive_mode(path, debug=False):
     print("Select encoding conversion:")
     print("1. EUC-KR")
     print("2. UTF-8")
-    encoding_choice = input("Enter choice (1/2): ").strip()
+    print("3. No conversion")
+    encoding_choice = input("Enter choice (1/2/3): ").strip()
     encoding = 'euc-kr' if encoding_choice == '1' else 'utf-8' if encoding_choice == '2' else None
 
-    sync_choice = input("Enter sync adjustment (e.g., +1000, -1000): ").strip()
+    sync_choice = input("Enter sync adjustment (e.g., +1000, -1000, or empty): ").strip()
     try:
         sync_offset = int(sync_choice)
     except ValueError:
         sync_offset = None
 
-    process_files(files, encoding, sync_offset, debug)
+    print("Select format conversion:")
+    print("1. SMI to SRT")
+    print("2. SRT to SMI")
+    print("3. No conversion")
+    format_choice = input("Enter choice (1/2/3): ").strip()
+    target_format = 'srt' if format_choice == '1' else 'smi' if format_choice == '2' else None
+
+    cc_class = 'KRCC'
+    if target_format == 'smi':
+        print("Select subtitle class:")
+        print("1. KRCC (Korean)")
+        print("2. ENCC (English)")
+        class_choice = input("Enter choice (1/2): ").strip()
+        cc_class = 'KRCC' if class_choice == '1' else 'ENCC' if class_choice == '2' else 'KRCC'
+
+    process_files(files, encoding, sync_offset, target_format, cc_class, debug)
 
 def main():
+    print_signature()
     parser = argparse.ArgumentParser(description="Subtitle file encoding converter and sync adjuster")
     parser.add_argument('path', help="Path to subtitle file or directory")
     parser.add_argument('-a', action='store_true', help="Run in interactive mode")
     parser.add_argument('-e', type=str, choices=['euc-kr', 'utf-8'], help="Encoding to convert to")
     parser.add_argument('-d', type=int, help="Decrease sync time by milliseconds")
     parser.add_argument('-i', type=int, help="Increase sync time by milliseconds")
+    parser.add_argument('-c', type=str, choices=['smi', 'srt'], help="Convert subtitle format")
+    parser.add_argument('--cc', type=str, choices=['KRCC', 'ENCC'], default='KRCC', help="Select class for SMI format conversion")
     parser.add_argument('--debug', action='store_true', help="Enable debug logs")
 
     args = parser.parse_args()
@@ -186,8 +302,7 @@ def main():
             print(f"[ERROR] No subtitle files found in {args.path}")
             return
 
-        process_files(files, args.e, sync_offset, args.debug)
+        process_files(files, args.e, sync_offset, args.c, args.cc, args.debug)
 
 if __name__ == "__main__":
     main()
-
