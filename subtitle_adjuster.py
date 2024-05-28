@@ -238,12 +238,60 @@ def get_files_from_path(path):
         print(f"[ERROR] Invalid path: {path}")
         return []
 
+def select_files(files):
+    print("Select files to process:")
+    for idx, file in enumerate(files):
+        print(f"{idx + 1}. {file}")
+    selection = input("Enter file numbers separated by commas (or 'all' to select all): ").strip()
+    
+    if selection.lower() == 'all':
+        return files
+    
+    selected_files = []
+    try:
+        indices = [int(x) - 1 for x in selection.split(',')]
+        selected_files = [files[i] for i in indices]
+    except (ValueError, IndexError):
+        print("[ERROR] Invalid selection. Please try again.")
+        return select_files(files)
+    
+    return selected_files
+
+def confirm_selection(files, encoding, sync_offset, target_format, cc_class):
+    print("\nYou have selected the following options:")
+    print(f"Files: {', '.join(files)}")
+
+    no_conversion = True
+    if encoding:
+        print(f"Encoding conversion: {encoding}")
+        no_conversion = False
+    if sync_offset is not None:
+        print(f"Sync adjustment: {sync_offset} milliseconds")
+        no_conversion = False
+    if target_format:
+        print(f"Format conversion: {target_format}")
+        no_conversion = False
+    if target_format == 'smi':
+        print(f"Subtitle class for SMI: {cc_class}")
+
+    if no_conversion:
+        print("No conversion options selected.")
+
+    confirm = input("Proceed with these settings? (y/n): ").strip().lower()
+    if confirm == 'y':
+        return True
+    else:
+        print("[INFO] Operation cancelled by user.")
+        return False
+
 def interactive_mode(path, debug=False):
     files = get_files_from_path(path)
     if not files:
         print(f"[ERROR] No subtitle files found in {path}")
         return
-
+    
+    files = select_files(files)
+    
     print("Select encoding conversion:")
     print("1. EUC-KR")
     print("2. UTF-8")
@@ -272,7 +320,8 @@ def interactive_mode(path, debug=False):
         class_choice = input("Enter choice (1/2): ").strip()
         cc_class = 'KRCC' if class_choice == '1' else 'ENCC' if class_choice == '2' else 'KRCC'
 
-    process_files(files, encoding, sync_offset, target_format, cc_class, debug)
+    if confirm_selection(files, encoding, sync_offset, target_format, cc_class):
+        process_files(files, encoding, sync_offset, target_format, cc_class, debug)
 
 def main():
     print_signature()
@@ -301,8 +350,9 @@ def main():
         if not files:
             print(f"[ERROR] No subtitle files found in {args.path}")
             return
-
-        process_files(files, args.e, sync_offset, args.c, args.cc, args.debug)
+        
+        if confirm_selection(files, args.e, sync_offset, args.c, args.cc):
+            process_files(files, args.e, sync_offset, args.c, args.cc, args.debug)
 
 if __name__ == "__main__":
     main()

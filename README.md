@@ -14,7 +14,7 @@ SubtitleAdjuster는 smi 및 srt 자막 파일의 형식과 인코딩을 변환�
 - 개별 지정 또는 대화형 옵션 실행
 - 디버그 모드를 통한 상세 로그 출력
 
-<img width="682" alt="ss" src="https://github.com/micronzone/SubtitleAdjuster/assets/47780105/08c139a5-0729-489c-a30d-7d3143901086">
+<img width="682" alt="ss" src="https://github.com/micronzone/SubtitleAdjuster/assets/47780105/12bae087-f04f-4b54-95df-46a3936d4f97">
 
 ### 설치 방법
 
