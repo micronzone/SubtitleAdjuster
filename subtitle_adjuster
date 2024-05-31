@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import re
 import sys
@@ -9,7 +10,16 @@ from tqdm import tqdm
 # Micronzone's SubtitleAdjuster
 # https://github.com/micronzone/SubtitleAdjuster
 def print_signature():
-    print("### SubtitleAdjuster v1.0.0 - https://github.com/micronzone/SubtitleAdjuster ###")
+    columns = os.get_terminal_size().columns
+    text = "SubtitleAdjuster v1.0.0 (https://github.com/micronzone/SubtitleAdjuster)"
+    text_length = len(text)
+    padding_length = (columns - text_length) // 2
+    pattern = "*="
+    full_pattern = pattern * (padding_length // len(pattern))
+    line = full_pattern + text + full_pattern
+    if len(line) < columns:
+        line += pattern[:columns - len(line)]
+    print(line)
 
 def detect_encoding(file_path):
     with open(file_path, 'rb') as f:
@@ -242,7 +252,7 @@ def select_files(files):
     print("Select files to process:")
     for idx, file in enumerate(files):
         print(f"{idx + 1}. {file}")
-    selection = input("Enter file numbers separated by commas (or 'all' to select all): ").strip()
+    selection = input("Enter file number(s) separated by commas (or 'all' to select all): ").strip()
     
     if selection.lower() == 'all':
         return files
