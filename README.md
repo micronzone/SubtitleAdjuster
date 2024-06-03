@@ -18,6 +18,8 @@ SubtitleAdjuster is a script that converts the format and encoding of smi and sr
 - Interactive mode or Quick execution option
 - Output detailed logs via debug mode
 
+<img width="682" alt="ss" src="https://github.com/micronzone/SubtitleAdjuster/assets/47780105/0eaf1711-49f4-4dbc-b5b0-9d65a5afc054">
+
 ### Installation
 
 Clone this repository:
